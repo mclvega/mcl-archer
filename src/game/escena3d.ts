@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { liberar } from '../rendimiento';
 import { CELDA, COLUMNAS, FILAS, MAPAS, PUERTA, type Obstaculo, type Sala, type TipoEnemigo } from '../core/room';
 import { animateWalk, createAvatar, DEFAULT_LOOK, type Look } from './characters';
 import type { Enemigo, Partida } from './run';
@@ -339,6 +340,9 @@ export class Escena3D {
   private recogibles: Reserva;
   private particulas: Reserva;
   private vector = new THREE.Vector3();
+  private dirCamara = new THREE.Vector3(0, Math.sin(ANGULO), Math.cos(ANGULO));
+  private sol!: THREE.DirectionalLight;
+  private tamSombras = -1;
 
   constructor(lienzo: HTMLCanvasElement, private ancho: number, private alto: number) {
     this.renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true });
@@ -355,6 +359,7 @@ export class Escena3D {
 
     this.escena.add(new THREE.HemisphereLight(0xffffff, 0x445577, 1.5));
     const sol = new THREE.DirectionalLight(0xffffff, 1.6);
+    this.sol = sol;
     sol.position.set(COLUMNAS / 2 - 4, 12, FILAS / 2 + 5);
     sol.target.position.set(COLUMNAS / 2, 0, FILAS / 2);
     sol.castShadow = true;
@@ -391,10 +396,24 @@ export class Escena3D {
   }
 
   private colocarCamara(dx: number, dz: number) {
-    const dir = new THREE.Vector3(0, Math.sin(ANGULO), Math.cos(ANGULO));
-    this.camara.position.copy(this.objetivo).addScaledVector(dir, 30).add(new THREE.Vector3(dx, 0, dz));
+    this.camara.position.copy(this.objetivo).addScaledVector(this.dirCamara, 30);
+    this.camara.position.x += dx;
+    this.camara.position.z += dz;
     this.camara.lookAt(this.objetivo.x + dx, 0, this.objetivo.z + dz);
     this.camara.updateMatrixWorld();
+  }
+
+  /** Tamaño del mapa de sombras según la calidad (0 = sin sombras). Solo cambia el estado si cambia. */
+  sombras(tam: number) {
+    if (tam === this.tamSombras) return;
+    this.tamSombras = tam;
+    this.renderer.shadowMap.enabled = tam > 0;
+    if (tam > 0) {
+      this.sol.shadow.mapSize.set(tam, tam);
+      this.sol.shadow.map?.dispose();
+      this.sol.shadow.map = null;
+    }
+    for (const m of cacheMat.values()) m.needsUpdate = true;
   }
 
   ajustar(anchoCss: number, altoCss: number, dpr: number) {
@@ -409,15 +428,19 @@ export class Escena3D {
   };
 
   private construirSala(sala: Sala) {
+    liberar(this.sala);
     this.sala.clear();
     const tema = MAPAS[sala.mapa];
-    const piso = new THREE.BoxGeometry(1, 0.2, 1);
+    // Todas las baldosas en una sola llamada de dibujo, con el color del damero por instancia.
+    const piso = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.2, 1), mat(0xffffff), FILAS * COLUMNAS);
+    piso.receiveShadow = true;
+    const m4 = new THREE.Matrix4();
+    const color = new THREE.Color();
     for (let f = 0; f < FILAS; f++) {
       for (let c = 0; c < COLUMNAS; c++) {
-        const baldosa = new THREE.Mesh(piso, mat(tema.piso[(f + c) % 2]));
-        baldosa.position.set(c + 0.5, -0.1, f + 0.5);
-        baldosa.receiveShadow = true;
-        this.sala.add(baldosa);
+        const i = f * COLUMNAS + c;
+        piso.setMatrixAt(i, m4.makeTranslation(c + 0.5, -0.1, f + 0.5));
+        piso.setColorAt(i, color.setHex(tema.piso[(f + c) % 2]));
         if (sala.rocas[f * COLUMNAS + c]) {
           const o = obstaculo(tema.obstaculo, tema.color);
           o.position.set(c + 0.5, 0, f + 0.5);
@@ -426,6 +449,7 @@ export class Escena3D {
         }
       }
     }
+    this.sala.add(piso);
     // Muretes alrededor de la sala.
     const muro = mat(tema.muro);
     for (const [x, z, w, d] of [[COLUMNAS / 2, -0.15, COLUMNAS + 0.6, 0.3], [COLUMNAS / 2, FILAS + 0.15, COLUMNAS + 0.6, 0.3], [-0.15, FILAS / 2, 0.3, FILAS], [COLUMNAS + 0.15, FILAS / 2, 0.3, FILAS]]) {
@@ -454,7 +478,10 @@ export class Escena3D {
     if (p.sala.numero !== this.salaActual) {
       this.construirSala(p.sala);
       this.salaActual = p.sala.numero;
-      for (const m of this.modelos.values()) this.escena.remove(m);
+      for (const m of this.modelos.values()) {
+        this.escena.remove(m);
+        liberar(m);
+      }
       this.modelos.clear();
     }
     const t = p.tiempo;
@@ -515,6 +542,7 @@ export class Escena3D {
     for (const [e, m] of this.modelos) {
       if (!vivos.has(e)) {
         this.escena.remove(m);
+        liberar(m);
         this.modelos.delete(e);
       }
     }

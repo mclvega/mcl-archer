@@ -1,6 +1,7 @@
 import { app } from '../app';
 import { audio } from '../audio';
 import { DIFICULTADES, MODOS } from '../core/difficulty';
+import { CALIDADES, LIMITES_FPS } from '../rendimiento';
 import { configPorDefecto, type Configuracion } from '../settings';
 import { guardadoNuevo, limpiarNombre } from '../storage';
 import { boton, h } from './dom';
@@ -85,6 +86,8 @@ export function panelConfiguracion(opciones: { enJuego?: boolean; alReiniciar: (
       opcion('Tamaño del texto', segmentado('tamanoTexto', [['normal', 'Normal'], ['grande', 'Grande'], ['muyGrande', 'Muy grande']], 'Tamaño del texto')),
       opcion('Animaciones', segmentado('animacionesReducidas', [[false, 'Completas'], [true, 'Reducidas']], 'Animaciones'), 'Con «Reducidas» no tiembla la pantalla y hay menos partículas.'),
       opcion('Pantalla completa', siNo('pantallaCompleta', 'Pantalla completa'), 'Se activa al tocar la pantalla.'),
+      opcion('Calidad', segmentado('calidad', CALIDADES, 'Calidad'), '«Auto» baja la resolución si el juego va lento. «Baja» quita las sombras.'),
+      opcion('Límite de FPS', segmentado('limiteFps', LIMITES_FPS, 'Límite de FPS'), 'A 30 FPS se gasta menos batería.'),
       opcion('Mostrar FPS', siNo('mostrarFps', 'Mostrar FPS')),
     ),
   );

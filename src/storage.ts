@@ -1,4 +1,4 @@
-import { DEFAULT_LOOK, LOOK_OPTIONS, type Look } from './game/characters';
+import { DEFAULT_LOOK, LOOK_OPTIONS, type Look } from './game/look';
 import { configPorDefecto, normalizarConfig, type Configuracion } from './settings';
 
 export interface Mejoras {

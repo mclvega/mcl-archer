@@ -6,6 +6,7 @@ import { version } from './package.json';
 export default defineConfig({
   plugins: [offline('mcl-archer')],
   define: { __VERSION__: JSON.stringify(version) },
-  build: { target: 'es2020' },
+  // three.js en su propio archivo: el navegador lo guarda entre versiones del juego.
+  build: { target: 'es2020', rolldownOptions: { output: { codeSplitting: { groups: [{ name: 'three', test: /node_modules[\/]three/ }] } } } },
   test: { environment: 'node', include: ['tests/**/*.test.ts'] },
 });

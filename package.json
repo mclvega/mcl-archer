@@ -1,7 +1,7 @@
 {
   "name": "mcl-archer",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Roguelite de arquero: muévete para esquivar, quédate quieto para disparar.",
   "type": "module",
   "scripts": {
