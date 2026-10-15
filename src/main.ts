@@ -7,13 +7,20 @@ import { Entrada } from './core/input';
 import { iniciarBucle } from './core/loop';
 import { HABILIDADES, type Habilidad } from './core/skills';
 import { iniciarPantallaCompleta } from './fullscreen';
-import { ALTO, ANCHO, Partida } from './game/run';
+import { Escena3D } from './game/escena3d';
+import { ALTO, ALTO_SALA, ANCHO, HUD, Partida } from './game/run';
 import { MEJORA_MAX, precioMejora, limpiarNombre, type Mejoras } from './storage';
 import { panelConfiguracion } from './ui/configuracion';
+import { pantallaPersonaje } from './ui/personaje';
 import { boton, h, mostrarPanel } from './ui/dom';
 
 const lienzo = document.getElementById('lienzo') as HTMLCanvasElement;
 const ctx = lienzo.getContext('2d')!;
+// La sala se dibuja en 3D debajo; el lienzo 2D lleva el HUD y las barras de vida.
+const lienzo3d = document.createElement('canvas');
+lienzo3d.id = 'lienzo3d';
+lienzo.before(lienzo3d);
+const escena = new Escena3D(lienzo3d, ANCHO, ALTO_SALA);
 const entrada = new Entrada([], document.getElementById('controles')!);
 let partida: Partida | null = null;
 
@@ -26,6 +33,15 @@ if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('tactil
 function ajustarLienzo() {
   const escala = Math.min(innerWidth / ANCHO, innerHeight / ALTO);
   const dpr = Math.min(2, devicePixelRatio || 1);
+  const izq = (innerWidth - ANCHO * escala) / 2;
+  const arriba = (innerHeight - ALTO * escala) / 2;
+  lienzo.style.left = `${izq}px`;
+  lienzo.style.top = `${arriba}px`;
+  lienzo3d.style.left = `${izq}px`;
+  lienzo3d.style.top = `${arriba + HUD * escala}px`;
+  lienzo3d.style.width = `${ANCHO * escala}px`;
+  lienzo3d.style.height = `${ALTO_SALA * escala}px`;
+  escena.ajustar(ANCHO * escala, ALTO_SALA * escala, dpr);
   lienzo.style.width = `${ANCHO * escala}px`;
   lienzo.style.height = `${ALTO * escala}px`;
   lienzo.width = Math.round(ANCHO * escala * dpr);
@@ -82,6 +98,7 @@ function menu() {
       h('p', { class: 'texto-suave', text: `¡Hola, ${app.nombre()}! · Récord: sala ${app.g.record} · 🪙 ${app.g.oro}` }),
       boton('Jugar', jugar, { variante: 'primario', icono: '▶' }),
       boton(`Dificultad: ${modo.nombre}`, configuracion, { icono: '🎯' }),
+      boton('Personaje', () => pantallaPersonaje(menu), { icono: '👕' }),
       boton('Mejoras', mejoras, { icono: '⬆️' }),
       boton('Récords', records, { icono: '🏆' }),
       boton('Configuración', configuracion, { icono: '⚙️' }),
@@ -238,9 +255,14 @@ iniciarBucle(
     const ahora = performance.now();
     fps = fps * 0.9 + (1000 / Math.max(1, ahora - ultimo)) * 0.1;
     ultimo = ahora;
-    ctx.fillStyle = '#0b1020';
-    ctx.fillRect(0, 0, ANCHO, ALTO);
-    partida?.dibujar(ctx, !app.g.config.animacionesReducidas);
+    ctx.clearRect(0, 0, ANCHO, ALTO);
+    if (partida) {
+      escena.dibujar(partida, app.g.look, !app.g.config.animacionesReducidas);
+      partida.dibujarHud(ctx, escena.proyectar);
+    } else {
+      ctx.fillStyle = '#0b1020';
+      ctx.fillRect(0, 0, ANCHO, ALTO);
+    }
     if (app.g.config.mostrarFps) {
       ctx.fillStyle = '#9f9';
       ctx.font = '11px monospace';
@@ -249,7 +271,8 @@ iniciarBucle(
   },
 );
 
-if (app.g.nombre) menu();
+if (import.meta.env.DEV && location.search.includes('demo')) jugar();
+else if (app.g.nombre) menu();
 else bienvenida();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

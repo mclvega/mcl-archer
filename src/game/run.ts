@@ -11,7 +11,7 @@ export const ALTO_SALA = FILAS * CELDA; // 520
 export const HUD = 64;
 export const ALTO = ALTO_SALA + HUD;
 
-interface Enemigo {
+export interface Enemigo {
   tipo: TipoEnemigo;
   x: number;
   y: number;
@@ -32,7 +32,7 @@ interface Enemigo {
   orbeCd: number;
 }
 
-interface Flecha {
+export interface Flecha {
   x: number;
   y: number;
   vx: number;
@@ -42,7 +42,7 @@ interface Flecha {
   golpeados: Set<Enemigo>;
 }
 
-interface Bala {
+export interface Bala {
   x: number;
   y: number;
   vx: number;
@@ -51,14 +51,14 @@ interface Bala {
   dano: number;
 }
 
-interface Recogible {
+export interface Recogible {
   x: number;
   y: number;
   tipo: 'xp' | 'oro';
   valor: number;
 }
 
-interface Particula {
+export interface Particula {
   x: number;
   y: number;
   vx: number;
@@ -67,7 +67,7 @@ interface Particula {
   color: string;
 }
 
-const COLOR: Record<TipoEnemigo, string> = {
+export const COLOR: Record<TipoEnemigo, string> = {
   murcielago: '#9b6bff',
   slime: '#53d86a',
   mago: '#ff6bd5',
@@ -108,18 +108,18 @@ export class Partida {
   pausada = false;
   terminada = false;
   private rng: Rng;
-  private jugador = { x: 0, y: 0, r: 11, cd: 0, invul: 0, dirX: 0, dirY: -1, moviendo: false };
+  jugador = { x: 0, y: 0, r: 11, cd: 0, invul: 0, dirX: 0, dirY: -1, moviendo: false };
   private rafagas: Array<{ t: number; angulo: number }> = [];
-  private enemigos: Enemigo[] = [];
-  private flechas: Flecha[] = [];
-  private balas: Bala[] = [];
-  private recogibles: Recogible[] = [];
-  private particulas: Particula[] = [];
-  private puertaAbierta = false;
-  private angel: { x: number; y: number; usado: boolean } | null = null;
+  enemigos: Enemigo[] = [];
+  flechas: Flecha[] = [];
+  balas: Bala[] = [];
+  recogibles: Recogible[] = [];
+  particulas: Particula[] = [];
+  puertaAbierta = false;
+  angel: { x: number; y: number; usado: boolean } | null = null;
   private nivelesPendientes = 0;
-  private tiempo = 0;
-  private temblor = 0;
+  tiempo = 0;
+  temblor = 0;
 
   /** modo se lee al entrar en cada sala: un cambio de dificultad se aplica en la siguiente. */
   constructor(mejoras: Mejoras, private eventos: EventosPartida, private modo: () => Modo, semilla = Date.now()) {
@@ -543,13 +543,10 @@ export class Partida {
     }
   }
 
-  /* ---------- Dibujo ---------- */
+  /* ---------- Dibujo (HUD 2D; la escena se dibuja en 3D) ---------- */
 
-  dibujar(ctx: CanvasRenderingContext2D, efectos = true) {
-    ctx.save();
-    if (efectos && this.temblor > 0) ctx.translate((this.rng.siguiente() - 0.5) * this.temblor, (this.rng.siguiente() - 0.5) * this.temblor);
-
-    // HUD
+  /** proyectar convierte un punto del mundo (y una altura en unidades 3D) a coordenadas de la sala en pantalla. */
+  dibujarHud(ctx: CanvasRenderingContext2D, proyectar: (x: number, y: number, altura: number) => { x: number; y: number }) {
     ctx.fillStyle = '#0b1020';
     ctx.fillRect(0, 0, ANCHO, HUD);
     ctx.fillStyle = '#f2f4ff';
@@ -568,126 +565,19 @@ export class Partida {
     ctx.fillStyle = '#f2f4ff';
     ctx.font = 'bold 11px system-ui, sans-serif';
     ctx.fillText(`Nv ${this.nivel}`, 16, 46.5);
+    ctx.textBaseline = 'alphabetic';
 
-    ctx.translate(0, HUD);
-    // Suelo y rocas
-    for (let f = 0; f < FILAS; f++) {
-      for (let c = 0; c < COLUMNAS; c++) {
-        ctx.fillStyle = (f + c) % 2 ? '#1b2547' : '#1f2a50';
-        ctx.fillRect(c * CELDA, f * CELDA, CELDA, CELDA);
-        if (this.sala.rocas[f * COLUMNAS + c]) {
-          ctx.fillStyle = '#4a5578';
-          ctx.fillRect(c * CELDA + 2, f * CELDA + 2, CELDA - 4, CELDA - 4);
-          ctx.fillStyle = '#5d6a93';
-          ctx.fillRect(c * CELDA + 2, f * CELDA + 2, CELDA - 4, 8);
-        }
-      }
-    }
-    // Puerta
-    ctx.fillStyle = this.puertaAbierta ? '#ffcf4a' : '#3a2a1a';
-    ctx.fillRect(PUERTA.col * CELDA + 4, 0, CELDA - 8, 8);
-    if (this.puertaAbierta) {
-      ctx.globalAlpha = 0.25 + 0.15 * Math.sin(this.tiempo * 6);
-      ctx.fillRect(PUERTA.col * CELDA, 0, CELDA, CELDA);
-      ctx.globalAlpha = 1;
-    }
-
-    if (this.angel && !this.angel.usado) {
-      ctx.font = '34px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('👼', this.angel.x, this.angel.y + Math.sin(this.tiempo * 3) * 4);
-      ctx.textAlign = 'left';
-    }
-
-    for (const r of this.recogibles) {
-      ctx.fillStyle = r.tipo === 'oro' ? '#ffcf4a' : '#4ad1ff';
-      ctx.beginPath();
-      ctx.arc(r.x, r.y, r.tipo === 'oro' ? 4 : 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    for (const e of this.enemigos) this.dibujarEnemigo(ctx, e);
-
-    // Flechas
-    ctx.strokeStyle = this.stats.fuego ? '#ff9a3d' : this.stats.hielo ? '#9fe8ff' : this.stats.veneno ? '#9dff6b' : '#fff6d0';
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    for (const f of this.flechas) {
-      const l = Math.hypot(f.vx, f.vy) || 1;
-      ctx.beginPath();
-      ctx.moveTo(f.x, f.y);
-      ctx.lineTo(f.x - (f.vx / l) * 12, f.y - (f.vy / l) * 12);
-      ctx.stroke();
-    }
-    ctx.fillStyle = '#ff4a6e';
-    for (const b of this.balas) {
-      ctx.beginPath();
-      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    this.dibujarJugador(ctx);
-
-    for (const p of this.particulas) {
-      ctx.globalAlpha = Math.min(1, p.vida * 3);
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
-    }
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  private dibujarJugador(ctx: CanvasRenderingContext2D) {
-    const j = this.jugador;
-    if (j.invul > 0 && Math.floor(j.invul * 20) % 2) ctx.globalAlpha = 0.4;
-    ctx.fillStyle = '#ffcf4a';
-    ctx.beginPath();
-    ctx.arc(j.x, j.y, j.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#1a1300';
-    const l = Math.hypot(j.dirX, j.dirY) || 1;
-    ctx.beginPath();
-    ctx.arc(j.x + (j.dirX / l) * 5, j.y + (j.dirY / l) * 5, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    for (let i = 0; i < this.stats.orbes; i++) {
-      const a = this.tiempo * 3 + (i * Math.PI * 2) / this.stats.orbes;
-      ctx.fillStyle = '#c08bff';
-      ctx.beginPath();
-      ctx.arc(j.x + Math.cos(a) * 42, j.y + Math.sin(a) * 42, 6, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    // Barra de vida sobre el arquero.
-    const w = 40;
-    ctx.fillStyle = '#000a';
-    ctx.fillRect(j.x - w / 2, j.y - j.r - 12, w, 5);
-    ctx.fillStyle = '#58e07a';
-    ctx.fillRect(j.x - w / 2, j.y - j.r - 12, (w * this.vida) / this.stats.vidaMax, 5);
-  }
-
-  private dibujarEnemigo(ctx: CanvasRenderingContext2D, e: Enemigo) {
-    ctx.globalAlpha = e.tipo === 'fantasma' ? 0.6 : 1;
-    ctx.fillStyle = e.flash > 0 ? '#ffffff' : e.lento > 0 ? '#9fe8ff' : COLOR[e.tipo];
-    ctx.beginPath();
-    if (e.tipo === 'torreta' || e.tipo === 'tortuga') ctx.rect(e.x - e.r, e.y - e.r, e.r * 2, e.r * 2);
-    else ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
-    ctx.fill();
-    if (e.tipo === 'murcielago') {
-      const ala = Math.sin(this.tiempo * 18) * 4;
-      ctx.fillRect(e.x - e.r - 8, e.y - 3 + ala, 8, 4);
-      ctx.fillRect(e.x + e.r, e.y - 3 + ala, 8, 4);
-    }
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#111';
-    ctx.fillRect(e.x - e.r * 0.45, e.y - e.r * 0.25, 3, 3);
-    ctx.fillRect(e.x + e.r * 0.45 - 3, e.y - e.r * 0.25, 3, 3);
-    if (e.vida < e.vidaMax) {
-      const w = e.tipo === 'jefe' ? 80 : e.r * 2;
+    // Barras de vida sobre las cabezas.
+    const barra = (x: number, y: number, altura: number, w: number, valor: number, color: string) => {
+      const p = proyectar(x, y, altura);
       ctx.fillStyle = '#000a';
-      ctx.fillRect(e.x - w / 2, e.y - e.r - 8, w, 4);
-      ctx.fillStyle = '#ff5a5a';
-      ctx.fillRect(e.x - w / 2, e.y - e.r - 8, (w * Math.max(0, e.vida)) / e.vidaMax, 4);
+      ctx.fillRect(p.x - w / 2, HUD + p.y - 6, w, 5);
+      ctx.fillStyle = color;
+      ctx.fillRect(p.x - w / 2, HUD + p.y - 6, w * Math.max(0, Math.min(1, valor)), 5);
+    };
+    barra(this.jugador.x, this.jugador.y, 1.9, 40, this.vida / this.stats.vidaMax, '#58e07a');
+    for (const e of this.enemigos) {
+      if (e.vida < e.vidaMax) barra(e.x, e.y, e.tipo === 'jefe' ? 3.6 : 1.6, e.tipo === 'jefe' ? 90 : 30, e.vida / e.vidaMax, '#ff5a5a');
     }
   }
 }
-

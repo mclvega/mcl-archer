@@ -126,3 +126,13 @@ body.jugando .boton-pausa { display: block; }
 input[type='text'] { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid #3a4680; background: var(--fondo); color: var(--texto); }
 .error-campo { margin: 0; min-height: 1.2em; color: var(--peligro); font-size: 0.9em; }
 .fila-mejora { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+#lienzo, #lienzo3d { position: fixed; inset: auto; margin: 0; }
+#lienzo { pointer-events: none; }
+.cz-vista { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.cz-lienzo canvas { width: 200px; height: 240px; touch-action: none; border-radius: 14px; background: rgb(127 140 200 / 0.12); }
+.cz-opciones { display: flex; flex-direction: column; gap: 12px; }
+.cz-seccion { display: flex; flex-direction: column; gap: 6px; }
+.cz-colores { display: flex; flex-wrap: wrap; gap: 8px; }
+.cz-colores button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.25); cursor: pointer; }
+.cz-colores button.on { outline: 3px solid var(--acento); outline-offset: 2px; }
