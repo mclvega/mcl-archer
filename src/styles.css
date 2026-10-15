@@ -141,6 +141,7 @@ input[type='text'] { font: inherit; padding: 12px; border-radius: 10px; border: 
 :root:not([data-theme='light']) { --fondo: #000; --panel: #000; }
 :root:not([data-theme='light']) .tarjeta { border: 1px solid #222; box-shadow: none; }
 :root:not([data-theme='light']) .btn-secundario { background: #000; border: 1px solid #333; }
+:root:not([data-theme='light']) .btn[aria-pressed='true'] { background: var(--acento); color: #1a1300; border-color: var(--acento); }
 :root:not([data-theme='light']) .seccion-config { background: #000; border: 1px solid #222; }
 :root:not([data-theme='light']) .capa { background: rgb(0 0 0 / 0.82); }
 :root:not([data-theme='light']) input[type='text'] { background: #000; border-color: #333; }
