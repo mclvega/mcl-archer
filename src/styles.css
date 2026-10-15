@@ -1,0 +1,128 @@
+:root {
+  --fondo: #0b1020;
+  --panel: #161d36;
+  --texto: #f2f4ff;
+  --suave: #a8b0d6;
+  --acento: #ffcf4a;
+  --peligro: #ff5a5a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 16px/1.4 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#lienzo {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  image-rendering: pixelated;
+}
+
+/* Controles táctiles: solo en pantallas táctiles y mientras se juega. */
+#controles { position: fixed; inset: 0; pointer-events: none; display: none; }
+body.jugando.tactil #controles { display: block; }
+.zona-joystick { position: absolute; left: 0; top: 0; bottom: 0; width: 55%; pointer-events: auto; }
+.joystick {
+  position: absolute;
+  width: 110px; height: 110px;
+  margin: -55px 0 0 -55px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.08);
+  border: 2px solid rgb(255 255 255 / 0.25);
+  display: none;
+}
+.joystick.visible { display: block; }
+.perilla {
+  position: absolute; left: 50%; top: 50%;
+  width: 50px; height: 50px; margin: -25px 0 0 -25px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.35);
+}
+.botones-tactiles {
+  position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom));
+  display: flex; gap: 12px; flex-wrap: wrap-reverse; justify-content: flex-end; max-width: 45%;
+  pointer-events: auto;
+}
+.boton-tactil {
+  width: 68px; height: 68px; border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  background: rgb(255 255 255 / 0.12);
+  color: var(--texto); font-weight: 700; font-size: 20px;
+}
+.boton-tactil:active { background: rgb(255 255 255 / 0.3); }
+
+/* Paneles (menús) */
+#ui { position: fixed; inset: 0; pointer-events: none; }
+.capa {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  padding: 16px; background: rgb(0 0 0 / 0.55); pointer-events: auto; overflow-y: auto;
+}
+.tarjeta {
+  width: min(420px, 100%);
+  background: var(--panel); border-radius: 18px; padding: 22px;
+  display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.5);
+}
+.tarjeta h1, .tarjeta h2 { margin: 0; text-align: center; }
+.tarjeta h1 { font-size: 34px; color: var(--acento); letter-spacing: 1px; }
+.texto-suave { color: var(--suave); margin: 0; text-align: center; }
+.fila { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.opciones { display: grid; gap: 10px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 10px 18px; border-radius: 12px; border: 0;
+  font: inherit; font-weight: 700; color: var(--texto); cursor: pointer;
+}
+.btn-primario { background: var(--acento); color: #1a1300; font-size: 20px; }
+.btn-secundario { background: #2a3460; }
+.btn-suave { background: transparent; border: 1px solid #3a4680; }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+.eleccion { text-align: left; justify-content: flex-start; padding: 14px; }
+.eleccion small { display: block; font-weight: 400; color: var(--suave); }
+
+.boton-pausa {
+  position: fixed; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right));
+  width: 44px; height: 44px; border-radius: 12px; border: 0;
+  background: rgb(255 255 255 / 0.12); color: var(--texto); font-size: 20px; display: none;
+}
+body.jugando .boton-pausa { display: block; }
+
+/* Tema claro (solo afecta a los menús; el juego mantiene su paleta). */
+:root[data-theme='light'] { --fondo: #e9edf7; --panel: #ffffff; --texto: #141a33; --suave: #4a5378; color-scheme: light; }
+:root[data-theme='light'] .btn-secundario { background: #dfe5f5; color: var(--texto); }
+:root[data-theme='light'] .btn-suave { border-color: #b8c2e0; color: var(--texto); }
+:root[data-texto='grande'] { font-size: 19px; }
+:root[data-texto='muyGrande'] { font-size: 22px; }
+
+.tarjeta.ancha { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.pila { display: flex; flex-direction: column; gap: 14px; }
+.cabecera { display: flex; align-items: center; gap: 12px; }
+.cabecera h2 { flex: 1; text-align: left; }
+.seccion-config { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; background: rgb(127 140 200 / 0.1); }
+.seccion-config h2 { font-size: 1.1em; text-align: left; }
+.opcion-config { display: flex; flex-direction: column; gap: 6px; }
+.etiqueta { font-weight: 700; }
+.ayuda-texto { margin: 0; font-size: 0.85em; color: var(--suave); }
+.segmentado { display: flex; flex-wrap: wrap; gap: 6px; }
+.segmentado .btn { flex: 1; min-height: 42px; padding: 6px 10px; }
+.btn[aria-pressed='true'] { background: var(--acento); color: #1a1300; }
+.deslizador { display: flex; align-items: center; gap: 10px; }
+.deslizador input { flex: 1; accent-color: var(--acento); }
+input[type='text'] { font: inherit; padding: 12px; border-radius: 10px; border: 1px solid #3a4680; background: var(--fondo); color: var(--texto); }
+.error-campo { margin: 0; min-height: 1.2em; color: var(--peligro); font-size: 0.9em; }
+.fila-mejora { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
