@@ -1,7 +1,7 @@
 import { audio } from '../audio';
 import type { Entrada } from '../core/input';
 import { crearRng, type Rng } from '../core/rng';
-import { CELDA, COLUMNAS, FILAS, INICIO, PUERTA, escalaDificultad, generarSala, type Sala, type TipoEnemigo } from '../core/room';
+import { CELDA, COLUMNAS, FILAS, INICIO, MAPAS, PUERTA, escalaDificultad, generarSala, type Sala, type TipoEnemigo } from '../core/room';
 import type { Modo } from '../core/difficulty';
 import { angulosDisparo, sortearHabilidades, statsBase, xpParaNivel, type Habilidad, type Stats } from '../core/skills';
 import type { Mejoras } from '../storage';
@@ -76,6 +76,14 @@ export const COLOR: Record<TipoEnemigo, string> = {
   fantasma: '#cfe3ff',
   tortuga: '#3fae8e',
   bomba: '#ff4a3d',
+  lobo: '#9e9e9e',
+  arana: '#5d4037',
+  serpiente: '#8bc34a',
+  golem: '#795548',
+  chaman: '#ff9800',
+  esqueleto: '#eeeeee',
+  escorpion: '#d84315',
+  elemental: '#4fc3f7',
   jefe: '#ff3366',
 };
 
@@ -88,6 +96,14 @@ const BASE: Record<TipoEnemigo, { vida: number; r: number; vel: number; dano: nu
   fantasma: { vida: 60, r: 12, vel: 48, dano: 14 },
   tortuga: { vida: 150, r: 16, vel: 22, dano: 18 },
   bomba: { vida: 30, r: 10, vel: 80, dano: 30 },
+  lobo: { vida: 45, r: 12, vel: 75, dano: 13 },
+  arana: { vida: 55, r: 13, vel: 50, dano: 11 },
+  serpiente: { vida: 55, r: 12, vel: 45, dano: 13 },
+  golem: { vida: 260, r: 18, vel: 18, dano: 22 },
+  chaman: { vida: 65, r: 12, vel: 20, dano: 12 },
+  esqueleto: { vida: 55, r: 12, vel: 30, dano: 14 },
+  escorpion: { vida: 80, r: 13, vel: 35, dano: 15 },
+  elemental: { vida: 70, r: 13, vel: 28, dano: 13 },
   jefe: { vida: 1400, r: 30, vel: 45, dano: 20 },
 };
 
@@ -117,6 +133,9 @@ export class Partida {
   particulas: Particula[] = [];
   puertaAbierta = false;
   angel: { x: number; y: number; usado: boolean } | null = null;
+  /** Oleada actual (0 = la primera) y espera antes de que aparezca la siguiente. */
+  oleada = 0;
+  private esperaOleada = 0;
   private nivelesPendientes = 0;
   tiempo = 0;
   temblor = 0;
@@ -142,10 +161,23 @@ export class Partida {
     this.balas = [];
     this.recogibles = [];
     this.rafagas = [];
-    const escala = escalaDificultad(numero);
-    this.enemigos = this.sala.enemigos.map((e) => this.crearEnemigo(e.tipo, (e.col + 0.5) * CELDA, (e.fila + 0.5) * CELDA, escala));
+    this.enemigos = [];
+    this.oleada = -1;
+    this.siguienteOleada();
     this.angel = this.sala.tipo === 'angel' ? { x: ANCHO / 2, y: ALTO_SALA / 2 - 40, usado: false } : null;
     this.puertaAbierta = this.enemigos.length === 0 && !this.angel;
+  }
+
+  private siguienteOleada() {
+    this.oleada++;
+    const escala = escalaDificultad(this.sala.numero);
+    for (const e of this.sala.enemigos) {
+      if (e.oleada !== this.oleada) continue;
+      const x = (e.col + 0.5) * CELDA;
+      const y = (e.fila + 0.5) * CELDA;
+      this.enemigos.push(this.crearEnemigo(e.tipo, x, y, escala));
+      if (this.oleada > 0) for (let i = 0; i < 6; i++) this.chispa(x, y, COLOR[e.tipo]);
+    }
   }
 
   private crearEnemigo(tipo: TipoEnemigo, x: number, y: number, escala: number, mini = false): Enemigo {
@@ -213,7 +245,14 @@ export class Partida {
     }
     this.particulas = this.particulas.filter((p) => p.vida > 0);
 
-    if (!this.puertaAbierta && this.enemigos.length === 0 && (!this.angel || this.angel.usado)) {
+    if (this.enemigos.length === 0 && this.oleada < this.sala.oleadas - 1) {
+      this.esperaOleada += dt;
+      if (this.esperaOleada > 0.8) {
+        this.esperaOleada = 0;
+        this.siguienteOleada();
+      }
+    }
+    if (!this.puertaAbierta && this.enemigos.length === 0 && this.oleada >= this.sala.oleadas - 1 && (!this.angel || this.angel.usado)) {
       this.puertaAbierta = true;
       audio.efecto('nivel');
     }
@@ -388,6 +427,79 @@ export class Partida {
             for (let k = 0; k < 8; k++) this.bala(e, giro + (k * Math.PI) / 4, 120, e.dano);
           }
           break;
+        case 'lobo':
+          // Corre en círculo alrededor del jugador y embiste de vez en cuando.
+          if (e.cd <= 0) {
+            e.vx = ux * 260;
+            e.vy = uy * 260;
+            e.cd = 2.6;
+            e.t = 0;
+          }
+          if (e.t < 0.35) this.mover(e, e.vx * factor * dt, e.vy * factor * dt);
+          else this.mover(e, (ux * 0.6 - uy) * vel * dt, (uy * 0.6 + ux) * vel * dt);
+          break;
+        case 'arana':
+          this.mover(e, (ux + Math.sin(e.t * 5) * uy) * vel * dt, (uy - Math.sin(e.t * 5) * ux) * vel * dt);
+          if (!e.mini && e.cd <= 0) {
+            e.cd = 3.2;
+            this.bala(e, Math.atan2(dy, dx), 150, e.dano);
+          }
+          break;
+        case 'serpiente':
+          this.mover(e, (ux + Math.cos(e.t * 4) * -uy * 1.5) * vel * dt, (uy + Math.cos(e.t * 4) * ux * 1.5) * vel * dt);
+          if (e.cd <= 0) {
+            e.cd = 2.4;
+            const base = Math.atan2(dy, dx);
+            for (const k of [-0.25, 0, 0.25]) this.bala(e, base + k, 160, e.dano);
+          }
+          break;
+        case 'golem':
+          this.mover(e, ux * vel * dt, uy * vel * dt);
+          if (e.cd <= 0) {
+            e.cd = 3.4;
+            this.temblor = 3;
+            for (let k = 0; k < 12; k++) this.bala(e, (k * Math.PI) / 6, 110, e.dano * 0.8);
+          }
+          break;
+        case 'chaman':
+          this.mover(e, -ux * vel * dt, -uy * vel * dt);
+          if (e.cd <= 0) {
+            e.cd = 5;
+            if (this.enemigos.length + nuevos.length < 24) {
+              nuevos.push(this.crearEnemigo('murcielago', e.x - 14, e.y, escala, true), this.crearEnemigo('murcielago', e.x + 14, e.y, escala, true));
+            } else this.bala(e, Math.atan2(dy, dx), 150, e.dano);
+          }
+          break;
+        case 'esqueleto':
+          this.mover(e, uy * vel * dt * Math.cos(e.t), -ux * vel * dt * Math.cos(e.t));
+          if (e.cd <= 0) {
+            e.cd = 2.2;
+            const base = Math.atan2(dy, dx);
+            this.bala(e, base - 0.08, 200, e.dano);
+            this.bala(e, base + 0.08, 200, e.dano);
+          }
+          break;
+        case 'escorpion':
+          if (e.cd <= 0) {
+            e.vx = ux * 200;
+            e.vy = uy * 200;
+            e.cd = 3;
+            e.t = 0;
+          }
+          if (e.t < 0.5) this.mover(e, e.vx * factor * dt, e.vy * factor * dt);
+          else if (e.t > 0.5 && e.t - dt <= 0.5) {
+            const base = Math.atan2(dy, dx);
+            for (let k = -1; k <= 1; k++) this.bala(e, base + k * 0.4, 170, e.dano);
+          }
+          break;
+        case 'elemental':
+          this.mover(e, Math.cos(e.t) * vel * dt, Math.sin(e.t * 1.3) * vel * dt);
+          if (e.cd <= 0) {
+            e.cd = 0.35;
+            this.bala(e, e.t * 2.5, 120, e.dano * 0.7);
+            this.bala(e, e.t * 2.5 + Math.PI, 120, e.dano * 0.7);
+          }
+          break;
         case 'jefe': {
           const furioso = e.vida < e.vidaMax / 2;
           this.mover(e, ux * vel * (furioso ? 1.4 : 1) * dt, uy * vel * (furioso ? 1.4 : 1) * dt);
@@ -409,6 +521,9 @@ export class Partida {
         this.morir(e);
         if (e.tipo === 'slime' && !e.mini) {
           nuevos.push(this.crearEnemigo('slime', e.x - 10, e.y, escala, true), this.crearEnemigo('slime', e.x + 10, e.y, escala, true));
+        }
+        if (e.tipo === 'arana' && !e.mini) {
+          for (let k = 0; k < 3; k++) nuevos.push(this.crearEnemigo('arana', e.x + (k - 1) * 10, e.y + 6, escala, true));
         }
       }
     }
@@ -447,7 +562,7 @@ export class Partida {
   }
 
   private danar(e: Enemigo, dano: number) {
-    e.vida -= e.tipo === 'tortuga' ? dano * 0.5 : dano;
+    e.vida -= e.tipo === 'tortuga' || e.tipo === 'golem' ? dano * 0.5 : dano;
     e.flash = 0.08;
     if (this.stats.fuego) e.quema = 2;
     if (this.stats.hielo) e.lento = 1.5;
@@ -516,7 +631,7 @@ export class Partida {
 
   private actualizarRecogibles(dt: number) {
     const j = this.jugador;
-    const iman = this.enemigos.length === 0;
+    const iman = this.enemigos.length === 0 && this.oleada >= this.sala.oleadas - 1;
     this.recogibles = this.recogibles.filter((r) => {
       const dx = j.x - r.x;
       const dy = j.y - r.y;
@@ -554,6 +669,11 @@ export class Partida {
     ctx.textBaseline = 'middle';
     const tipo = this.sala.tipo === 'jefe' ? ' · JEFE' : this.sala.tipo === 'angel' ? ' · Ángel' : '';
     ctx.fillText(`Sala ${this.sala.numero}${tipo}`, 12, 20);
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillStyle = '#aab3d6';
+    const oleadas = this.sala.oleadas > 1 ? ` · Oleada ${this.oleada + 1}/${this.sala.oleadas}` : '';
+    ctx.fillText(`${MAPAS[this.sala.mapa].nombre}${oleadas}`, 140, 20);
+    ctx.font = 'bold 16px system-ui, sans-serif';
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ffcf4a';
     ctx.fillText(`🪙 ${this.oro}`, ANCHO - 64, 20);

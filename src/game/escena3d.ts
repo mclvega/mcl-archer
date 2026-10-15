@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CELDA, COLUMNAS, FILAS, PUERTA, type Sala, type TipoEnemigo } from '../core/room';
+import { CELDA, COLUMNAS, FILAS, MAPAS, PUERTA, type Obstaculo, type Sala, type TipoEnemigo } from '../core/room';
 import { animateWalk, createAvatar, DEFAULT_LOOK, type Look } from './characters';
 import type { Enemigo, Partida } from './run';
 
@@ -9,6 +9,17 @@ const ANGULO = (58 * Math.PI) / 180;
 const ESCALA_PERSONAJE = 0.82;
 /** Margen para que se vean los muretes laterales. */
 const ZOOM = (COLUMNAS + 0.8) / COLUMNAS;
+
+const cacheHex = new Map<string, number>();
+/** Convierte '#rrggbb' a número una sola vez por color. */
+function hex(color: string): number {
+  let v = cacheHex.get(color);
+  if (v === undefined) {
+    v = new THREE.Color(color).getHex();
+    cacheHex.set(color, v);
+  }
+  return v;
+}
 
 const cacheMat = new Map<string, THREE.Material>();
 function mat(color: number, opciones: { basico?: boolean; opacidad?: number; emisivo?: number } = {}): THREE.Material {
@@ -132,6 +143,95 @@ function crearModelo(tipo: TipoEnemigo, mini: boolean): THREE.Group {
       g.add(a.group);
       break;
     }
+    case 'lobo': {
+      const torso = malla(new THREE.BoxGeometry(0.3, 0.28, 0.6), mat(0x757575), 0, 0.42, 0);
+      cuerpo.add(torso);
+      cuerpo.add(malla(new THREE.BoxGeometry(0.24, 0.22, 0.26), mat(0x9e9e9e), 0, 0.55, 0.38));
+      cuerpo.add(malla(new THREE.BoxGeometry(0.12, 0.1, 0.16), mat(0xbdbdbd), 0, 0.5, 0.56));
+      for (const x of [-0.08, 0.08]) cuerpo.add(malla(new THREE.ConeGeometry(0.05, 0.14, 4), mat(0x616161), x, 0.72, 0.36));
+      for (const [x, z] of [[-0.1, 0.2], [0.1, 0.2], [-0.1, -0.2], [0.1, -0.2]]) cuerpo.add(malla(new THREE.BoxGeometry(0.08, 0.3, 0.08), mat(0x616161), x, 0.15, z));
+      const cola = malla(new THREE.ConeGeometry(0.06, 0.3, 5), mat(0x757575), 0, 0.5, -0.4);
+      cola.rotation.x = -Math.PI / 3;
+      cuerpo.add(cola);
+      ojos(0.6, 0.51, 0.06, 0.03);
+      break;
+    }
+    case 'arana': {
+      cuerpo.add(malla(new THREE.SphereGeometry(0.24, 12, 10), mat(0x4e342e), 0, 0.3, -0.12));
+      cuerpo.add(malla(new THREE.SphereGeometry(0.14, 10, 8), mat(0x3e2723), 0, 0.28, 0.15));
+      for (const lado of [-1, 1]) {
+        for (let k = 0; k < 4; k++) {
+          const pata = malla(new THREE.CylinderGeometry(0.02, 0.02, 0.45, 4), mat(0x212121), lado * 0.25, 0.22, 0.12 - k * 0.1);
+          pata.rotation.z = lado * 1.1;
+          cuerpo.add(pata);
+          (g.userData.patas ??= []).push(pata);
+        }
+      }
+      for (const x of [-0.05, 0.05]) cuerpo.add(malla(new THREE.SphereGeometry(0.03, 6, 4), mat(0xff1744, { basico: true }), x, 0.32, 0.27));
+      break;
+    }
+    case 'serpiente': {
+      for (let k = 0; k < 5; k++) {
+        const seg = malla(new THREE.SphereGeometry(0.14 - k * 0.015, 10, 8), mat(k % 2 ? 0x689f38 : 0x8bc34a), 0, 0.14, 0.2 - k * 0.17);
+        cuerpo.add(seg);
+        (g.userData.segmentos ??= []).push(seg);
+      }
+      cuerpo.add(malla(new THREE.BoxGeometry(0.2, 0.14, 0.24), mat(0x7cb342), 0, 0.24, 0.32));
+      ojos(0.3, 0.42, 0.06, 0.03);
+      break;
+    }
+    case 'golem': {
+      cuerpo.add(malla(new THREE.DodecahedronGeometry(0.38, 0), mat(0x6d4c41), 0, 0.7, 0));
+      cuerpo.add(malla(new THREE.DodecahedronGeometry(0.2, 0), mat(0x795548), 0, 1.15, 0.05));
+      for (const lado of [-1, 1]) {
+        cuerpo.add(malla(new THREE.DodecahedronGeometry(0.17, 0), mat(0x5d4037), lado * 0.48, 0.6, 0));
+        cuerpo.add(malla(new THREE.BoxGeometry(0.18, 0.35, 0.18), mat(0x4e342e), lado * 0.18, 0.18, 0));
+      }
+      for (const x of [-0.07, 0.07]) cuerpo.add(malla(new THREE.SphereGeometry(0.04, 6, 4), mat(0xff6d00, { basico: true }), x, 1.18, 0.2));
+      break;
+    }
+    case 'chaman': {
+      const a = createAvatar({ ...DEFAULT_LOOK, shirt: 0xff9800, bottom: 'skirt', bottomColor: 0x5d4037, hair: 'long', hairColor: 0x212121, hat: 'none', skin: 0x8d5524 });
+      for (const [x, c] of [[-0.12, 0xe53935], [0, 0x43a047], [0.12, 0x1e88e5]] as const) {
+        const pluma = malla(new THREE.ConeGeometry(0.04, 0.3, 4), mat(c), x, 1.75, -0.05);
+        a.body.add(pluma);
+      }
+      a.body.add(malla(new THREE.CylinderGeometry(0.02, 0.02, 1, 5), mat(0x6d4c41), 0.36, 0.6, 0.12));
+      a.body.add(malla(new THREE.SphereGeometry(0.07, 8, 6), mat(0x76ff03, { basico: true }), 0.36, 1.12, 0.12));
+      a.group.scale.setScalar(ESCALA_PERSONAJE);
+      g.userData.avatar = a.body;
+      g.add(a.group);
+      break;
+    }
+    case 'esqueleto': {
+      const a = createAvatar({ ...DEFAULT_LOOK, skin: 0xeeeeee, shirt: 0xe0e0e0, bottomColor: 0xbdbdbd, hair: 'bald', hat: 'none', facialHair: 'none' });
+      conArco(a.group, a.body);
+      a.group.scale.setScalar(ESCALA_PERSONAJE * 0.95);
+      g.userData.avatar = a.body;
+      g.add(a.group);
+      break;
+    }
+    case 'escorpion': {
+      const torso = malla(new THREE.SphereGeometry(0.26, 12, 8), mat(0xbf360c), 0, 0.2, 0);
+      torso.scale.set(1, 0.5, 1.3);
+      cuerpo.add(torso);
+      for (let k = 0; k < 4; k++) cuerpo.add(malla(new THREE.SphereGeometry(0.09, 8, 6), mat(0xd84315), 0, 0.3 + k * 0.13, -0.3 - Math.sin(k * 0.6) * 0.12 + k * 0.04));
+      cuerpo.add(malla(new THREE.ConeGeometry(0.05, 0.16, 5), mat(0x212121), 0, 0.82, -0.18));
+      for (const lado of [-1, 1]) cuerpo.add(malla(new THREE.SphereGeometry(0.09, 8, 6), mat(0xe64a19), lado * 0.22, 0.2, 0.38));
+      ojos(0.28, 0.3, 0.06, 0.03);
+      break;
+    }
+    case 'elemental': {
+      const nucleo = malla(new THREE.IcosahedronGeometry(0.26, 0), mat(0x4fc3f7, { emisivo: 0x0277bd }), 0, 0.8, 0);
+      cuerpo.add(nucleo);
+      for (let k = 0; k < 3; k++) {
+        const fragmento = malla(new THREE.OctahedronGeometry(0.1), mat(0xb3e5fc, { opacidad: 0.8 }), Math.cos(k * 2.1) * 0.42, 0.8, Math.sin(k * 2.1) * 0.42);
+        cuerpo.add(fragmento);
+      }
+      g.userData.giro = true;
+      ojos(0.84, 0.22, 0.08, 0.04);
+      break;
+    }
     case 'jefe': {
       const a = createAvatar({ ...DEFAULT_LOOK, body: 'chubby', height: 'tall', shirt: 0xc62828, bottomColor: 0x212121, hat: 'crown', facialHair: 'beard', hairColor: 0x212121, accessory: 'scarf', skin: 0xc68642 });
       a.group.scale.setScalar(1.45);
@@ -141,6 +241,60 @@ function crearModelo(tipo: TipoEnemigo, mini: boolean): THREE.Group {
     }
   }
   if (mini) g.scale.setScalar(0.65);
+  return g;
+}
+
+/** Obstáculo de una celda según el bioma (bloquea igual que una roca). */
+function obstaculo(tipo: Obstaculo, color: number): THREE.Group {
+  const g = new THREE.Group();
+  const add = (m: THREE.Mesh) => {
+    m.receiveShadow = true;
+    g.add(m);
+    return m;
+  };
+  switch (tipo) {
+    case 'roca':
+      add(malla(new THREE.DodecahedronGeometry(0.5, 0), mat(color), 0, 0.32, 0)).scale.set(1, 0.75, 1);
+      add(malla(new THREE.DodecahedronGeometry(0.2, 0), mat(0x8590ad), 0.25, 0.72, -0.15));
+      break;
+    case 'arbol':
+      add(malla(new THREE.CylinderGeometry(0.1, 0.14, 0.5, 6), mat(0x6d4c41), 0, 0.25, 0));
+      add(malla(new THREE.ConeGeometry(0.48, 0.8, 7), mat(color), 0, 0.85, 0));
+      add(malla(new THREE.ConeGeometry(0.34, 0.6, 7), mat(0x388e3c), 0, 1.25, 0));
+      break;
+    case 'cactus':
+      add(malla(new THREE.CylinderGeometry(0.16, 0.18, 0.95, 8), mat(color), 0, 0.47, 0));
+      for (const lado of [-1, 1]) {
+        add(malla(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 6), mat(color), lado * 0.25, 0.5 + lado * 0.08, 0));
+        add(malla(new THREE.CylinderGeometry(0.08, 0.08, 0.2, 6), mat(color), lado * 0.25, 0.7 + lado * 0.08, 0)).rotation.z = 0;
+      }
+      add(malla(new THREE.CylinderGeometry(0.42, 0.45, 0.06, 8), mat(0xb08d4a), 0, 0.03, 0));
+      break;
+    case 'cristal':
+      add(malla(new THREE.OctahedronGeometry(0.42, 0), mat(color, { opacidad: 0.85, emisivo: 0x1a4a66 }), 0, 0.5, 0)).scale.set(0.8, 1.4, 0.8);
+      add(malla(new THREE.OctahedronGeometry(0.2, 0), mat(0xe1f5fe, { opacidad: 0.85 }), 0.28, 0.25, 0.15));
+      break;
+    case 'magma':
+      add(malla(new THREE.DodecahedronGeometry(0.5, 0), mat(color), 0, 0.3, 0)).scale.set(1, 0.7, 1);
+      add(malla(new THREE.BoxGeometry(0.5, 0.06, 0.08), mat(0xff6d00, { basico: true }), 0, 0.52, 0.25));
+      add(malla(new THREE.SphereGeometry(0.1, 6, 4), mat(0xffab00, { basico: true }), 0.2, 0.6, -0.1));
+      break;
+    case 'lapida':
+      add(malla(new THREE.BoxGeometry(0.6, 0.8, 0.18), mat(color), 0, 0.4, 0));
+      add(malla(new THREE.CylinderGeometry(0.3, 0.3, 0.18, 10, 1, false, 0, Math.PI), mat(color), 0, 0.8, 0)).rotation.set(Math.PI / 2, 0, Math.PI / 2);
+      add(malla(new THREE.BoxGeometry(0.7, 0.1, 0.7), mat(0x5d5d5d), 0, 0.05, 0.1));
+      break;
+    case 'tronco':
+      add(malla(new THREE.CylinderGeometry(0.2, 0.22, 0.85, 7), mat(color), 0, 0.2, 0)).rotation.z = Math.PI / 2;
+      add(malla(new THREE.SphereGeometry(0.12, 6, 4), mat(0x7cb342), 0.2, 0.42, 0.05));
+      add(malla(new THREE.CylinderGeometry(0.45, 0.45, 0.03, 10), mat(0x33691e, { opacidad: 0.7 }), 0, 0.02, 0));
+      break;
+    case 'columna':
+      add(malla(new THREE.BoxGeometry(0.7, 0.15, 0.7), mat(color), 0, 0.08, 0));
+      add(malla(new THREE.CylinderGeometry(0.22, 0.25, 1.2, 10), mat(color), 0, 0.75, 0));
+      add(malla(new THREE.BoxGeometry(0.6, 0.15, 0.6), mat(color), 0, 1.4, 0));
+      break;
+  }
   return g;
 }
 
@@ -256,25 +410,24 @@ export class Escena3D {
 
   private construirSala(sala: Sala) {
     this.sala.clear();
+    const tema = MAPAS[sala.mapa];
     const piso = new THREE.BoxGeometry(1, 0.2, 1);
     for (let f = 0; f < FILAS; f++) {
       for (let c = 0; c < COLUMNAS; c++) {
-        const baldosa = new THREE.Mesh(piso, mat((f + c) % 2 ? 0x2b3a6b : 0x324477));
+        const baldosa = new THREE.Mesh(piso, mat(tema.piso[(f + c) % 2]));
         baldosa.position.set(c + 0.5, -0.1, f + 0.5);
         baldosa.receiveShadow = true;
         this.sala.add(baldosa);
         if (sala.rocas[f * COLUMNAS + c]) {
-          const roca = malla(new THREE.DodecahedronGeometry(0.5, 0), mat(0x6d7896), c + 0.5, 0.32, f + 0.5);
-          roca.scale.set(1, 0.75, 1);
-          roca.rotation.y = (c * 7 + f * 13) % 6;
-          roca.receiveShadow = true;
-          this.sala.add(roca);
-          this.sala.add(malla(new THREE.DodecahedronGeometry(0.2, 0), mat(0x8590ad), c + 0.75, 0.72, f + 0.35));
+          const o = obstaculo(tema.obstaculo, tema.color);
+          o.position.set(c + 0.5, 0, f + 0.5);
+          o.rotation.y = (c * 7 + f * 13) % 6;
+          this.sala.add(o);
         }
       }
     }
     // Muretes alrededor de la sala.
-    const muro = mat(0x1b2547);
+    const muro = mat(tema.muro);
     for (const [x, z, w, d] of [[COLUMNAS / 2, -0.15, COLUMNAS + 0.6, 0.3], [COLUMNAS / 2, FILAS + 0.15, COLUMNAS + 0.6, 0.3], [-0.15, FILAS / 2, 0.3, FILAS], [COLUMNAS + 0.15, FILAS / 2, 0.3, FILAS]]) {
       this.sala.add(malla(new THREE.BoxGeometry(w, 0.5, d), muro, x, 0.25, z));
     }
@@ -384,10 +537,20 @@ export class Escena3D {
         cuerpo.scale.set(1 + Math.sin(t * 6 + e.y) * 0.08, 1 - Math.sin(t * 6 + e.y) * 0.08, 1);
       } else if (e.tipo === 'fantasma') {
         cuerpo.position.y = Math.sin(t * 2 + e.x) * 0.1;
+      } else if (e.tipo === 'arana' || e.tipo === 'lobo' || e.tipo === 'escorpion') {
+        cuerpo.position.y = Math.abs(Math.sin(t * 12 + e.x)) * 0.04;
+        (m.userData.patas as THREE.Mesh[] | undefined)?.forEach((pt, i) => (pt.rotation.x = Math.sin(t * 14 + i) * 0.4));
+      } else if (e.tipo === 'serpiente') {
+        (m.userData.segmentos as THREE.Mesh[]).forEach((sg, i) => (sg.position.x = Math.sin(t * 6 - i) * 0.08));
+      } else if (e.tipo === 'elemental') {
+        cuerpo.rotation.y = t * 2;
+        cuerpo.position.y = Math.sin(t * 3 + e.x) * 0.08;
+      } else if (e.tipo === 'golem') {
+        cuerpo.rotation.z = Math.sin(t * 3 + e.x) * 0.05;
       } else if (e.tipo === 'bomba') {
         (m.userData.chispa as THREE.Mesh).visible = Math.floor(t * 10) % 2 === 0;
       }
-      if (m.userData.avatar) animateWalk(m.userData.avatar as THREE.Group, t + e.x, e.tipo !== 'arquero');
+      if (m.userData.avatar) animateWalk(m.userData.avatar as THREE.Group, t + e.x, e.tipo !== 'arquero' && e.tipo !== 'esqueleto');
       if (e.lento > 0) cuerpo.position.y = 0;
     }
 
@@ -420,7 +583,7 @@ export class Escena3D {
     for (const q of p.particulas) {
       const o = this.particulas.tomar() as THREE.Mesh;
       o.position.set(q.x / U, 0.4 + (0.6 - q.vida) * 0.8, q.y / U);
-      o.material = mat(new THREE.Color(q.color).getHex(), { basico: true });
+      o.material = mat(hex(q.color), { basico: true });
       o.scale.setScalar(Math.max(0.2, q.vida * 2));
     }
     this.particulas.fin();

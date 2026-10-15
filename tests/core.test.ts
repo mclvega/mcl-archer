@@ -1,6 +1,6 @@
 ﻿import { describe, expect, it } from 'vitest';
 import { crearRng } from '../src/core/rng';
-import { COLUMNAS, FILAS, INICIO, PUERTA, conectada, generarSala, tipoDeSala } from '../src/core/room';
+import { COLUMNAS, FILAS, INICIO, MAPAS, PUERTA, conectada, generarSala, mapaDeSala, tipoDeSala } from '../src/core/room';
 import { HABILIDADES, angulosDisparo, sortearHabilidades, statsBase, xpParaNivel } from '../src/core/skills';
 import { normalizarConfig } from '../src/settings';
 import { CLAVE_GUARDADO, cargar, guardadoNuevo, normalizarGuardado } from '../src/storage';
@@ -25,6 +25,21 @@ describe('salas', () => {
       if (s.tipo === 'jefe') expect(s.enemigos.map((e) => e.tipo)).toEqual(['jefe']);
       if (s.tipo === 'angel') expect(s.enemigos).toHaveLength(0);
     }
+  });
+
+  it('el mapa cambia tras cada jefe y recorre todos los biomas', () => {
+    expect(mapaDeSala(1)).toBe(mapaDeSala(10));
+    expect(mapaDeSala(11)).not.toBe(mapaDeSala(10));
+    const vistos = new Set(Array.from({ length: 80 }, (_, i) => mapaDeSala(i + 1)));
+    expect(vistos.size).toBe(Object.keys(MAPAS).length);
+  });
+
+  it('las salas profundas tienen varias oleadas y muchos enemigos variados', () => {
+    const s = generarSala(31, crearRng(9));
+    expect(s.oleadas).toBe(3);
+    expect(s.enemigos.length).toBeGreaterThan(30);
+    expect(new Set(s.enemigos.map((e) => e.oleada)).size).toBe(3);
+    expect(new Set(s.enemigos.map((e) => e.tipo)).size).toBeGreaterThan(6);
   });
 
   it('la misma semilla da la misma sala', () => {
