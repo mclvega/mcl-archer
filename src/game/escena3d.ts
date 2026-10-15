@@ -190,7 +190,7 @@ export class Escena3D {
     this.renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.escena.background = new THREE.Color(0x0b1020);
+    this.escena.background = new THREE.Color(0x000000);
 
     const unidadesAncho = (ancho / U) * ZOOM;
     const unidadesAlto = (alto / U) * ZOOM;

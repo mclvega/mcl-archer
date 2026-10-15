@@ -136,3 +136,12 @@ input[type='text'] { font: inherit; padding: 12px; border-radius: 10px; border: 
 .cz-colores { display: flex; flex-wrap: wrap; gap: 8px; }
 .cz-colores button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgb(255 255 255 / 0.25); cursor: pointer; }
 .cz-colores button.on { outline: 3px solid var(--acento); outline-offset: 2px; }
+
+/* Modo oscuro AMOLED (regla 8): negro puro, separado con bordes finos. */
+:root:not([data-theme='light']) { --fondo: #000; --panel: #000; }
+:root:not([data-theme='light']) .tarjeta { border: 1px solid #222; box-shadow: none; }
+:root:not([data-theme='light']) .btn-secundario { background: #000; border: 1px solid #333; }
+:root:not([data-theme='light']) .seccion-config { background: #000; border: 1px solid #222; }
+:root:not([data-theme='light']) .capa { background: rgb(0 0 0 / 0.82); }
+:root:not([data-theme='light']) input[type='text'] { background: #000; border-color: #333; }
+:root:not([data-theme='light']) .boton-pausa { background: #000; border: 1px solid #333; }

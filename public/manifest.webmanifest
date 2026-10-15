@@ -3,7 +3,7 @@
   "short_name": "McL Archer",
   "start_url": "/",
   "display": "fullscreen",
-  "background_color": "#0b1020",
-  "theme_color": "#0b1020",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
 }

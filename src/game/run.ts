@@ -547,7 +547,7 @@ export class Partida {
 
   /** proyectar convierte un punto del mundo (y una altura en unidades 3D) a coordenadas de la sala en pantalla. */
   dibujarHud(ctx: CanvasRenderingContext2D, proyectar: (x: number, y: number, altura: number) => { x: number; y: number }) {
-    ctx.fillStyle = '#0b1020';
+    ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, ANCHO, HUD);
     ctx.fillStyle = '#f2f4ff';
     ctx.font = 'bold 16px system-ui, sans-serif';

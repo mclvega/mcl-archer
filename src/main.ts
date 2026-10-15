@@ -260,7 +260,7 @@ iniciarBucle(
       escena.dibujar(partida, app.g.look, !app.g.config.animacionesReducidas);
       partida.dibujarHud(ctx, escena.proyectar);
     } else {
-      ctx.fillStyle = '#0b1020';
+      ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, ANCHO, ALTO);
     }
     if (app.g.config.mostrarFps) {
