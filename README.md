@@ -1,6 +1,6 @@
 # McL Archer
 
-Roguelite de arquero para el navegador, inspirado en Archero. Muévete para esquivar y quédate quieto para disparar solo. Las salas no se acaban: cada 5 hay un ángel y cada 10, un jefe.
+Roguelite de arquero para el navegador, inspirado en Archero. Muévete para esquivar: el arquero dispara solo, también en movimiento. Las salas no se acaban: cada 5 hay un ángel y cada 10, un jefe.
 
 - Al subir de nivel eliges 1 de 3 habilidades (18 en total).
 - El oro sirve para mejoras permanentes.

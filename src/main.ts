@@ -84,7 +84,7 @@ function bienvenida() {
   mostrarPanel(
     h('div', { class: 'tarjeta' },
       h('h1', { text: '🏹 McL Archer' }),
-      h('p', { class: 'texto-suave', text: 'Muévete para esquivar. Quédate quieto para disparar. Cada sala es más difícil y no tiene fin.' }),
+      h('p', { class: 'texto-suave', text: 'Muévete para esquivar: disparas solo, incluso en movimiento. Cada sala es más difícil y no tiene fin.' }),
       campo,
       error,
       boton('Empezar', seguir, { variante: 'primario' }),

@@ -497,25 +497,24 @@ export class Escena3D {
     g.position.set(j.x / U, 0, j.y / U);
     let mirarX = j.dirX;
     let mirarY = j.dirY;
-    if (!j.moviendo) {
-      let cerca: Enemigo | null = null;
-      let d = Infinity;
-      for (const e of p.enemigos) {
-        const de = (e.x - j.x) ** 2 + (e.y - j.y) ** 2;
-        if (de < d) {
-          d = de;
-          cerca = e;
-        }
+    // Mira siempre al enemigo más cercano (dispara también caminando).
+    let cerca: Enemigo | null = null;
+    let d = Infinity;
+    for (const e of p.enemigos) {
+      const de = (e.x - j.x) ** 2 + (e.y - j.y) ** 2;
+      if (de < d) {
+        d = de;
+        cerca = e;
       }
-      if (cerca) {
-        mirarX = cerca.x - j.x;
-        mirarY = cerca.y - j.y;
-      }
+    }
+    if (cerca) {
+      mirarX = cerca.x - j.x;
+      mirarY = cerca.y - j.y;
     }
     g.rotation.y = Math.atan2(mirarX, mirarY);
     animateWalk(this.jugador.body, t, j.moviendo);
     const brazos = this.jugador.body.userData.arms as THREE.Object3D[];
-    if (!j.moviendo && p.enemigos.length) brazos[1].rotation.x = -Math.PI / 2; // apuntando con el arco
+    if (p.enemigos.length) brazos[1].rotation.x = -Math.PI / 2; // apuntando con el arco
     g.visible = !(j.invul > 0 && Math.floor(j.invul * 20) % 2);
 
     // Orbes guardianes

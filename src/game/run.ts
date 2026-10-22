@@ -287,10 +287,10 @@ export class Partida {
       this.mover(j, entrada.x * this.stats.velocidad * dt, entrada.y * this.stats.velocidad * dt);
     }
 
-    // Disparo automático: solo con el arquero quieto, como en el género.
+    // Disparo automático al enemigo más cercano, también mientras se mueve.
     j.cd -= dt;
     const objetivo = this.masCercano();
-    if (!j.moviendo && objetivo && j.cd <= 0) {
+    if (objetivo && j.cd <= 0) {
       j.cd = 1 / this.stats.cadencia;
       const angulo = Math.atan2(objetivo.y - j.y, objetivo.x - j.x);
       for (let i = 0; i < this.stats.multidisparo; i++) this.rafagas.push({ t: i * 0.1, angulo });
