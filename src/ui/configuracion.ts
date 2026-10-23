@@ -5,6 +5,7 @@ import { CALIDADES, LIMITES_FPS } from '../rendimiento';
 import { configPorDefecto, type Configuracion } from '../settings';
 import { guardadoNuevo, limpiarNombre } from '../storage';
 import { boton, h } from './dom';
+import { opcionesSinConexion } from './sinconexion';
 
 declare const __VERSION__: string;
 
@@ -96,6 +97,7 @@ export function panelConfiguracion(opciones: { enJuego?: boolean; alReiniciar: (
     raiz.append(
       seccion(
         '💾 Mis datos',
+        opcionesSinConexion(),
         boton('Restaurar valores recomendados', () => {
           app.g.config = configPorDefecto();
           app.guardar();
